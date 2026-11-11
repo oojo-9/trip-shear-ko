@@ -83,6 +83,11 @@ function openTrip(id) {
   App.unsub.push(Store.watchTrip(id, t => {
     if (!t) { toast('여행을 찾을 수 없어요. 링크를 확인해 주세요.', 4000); return goHome(); }
     App.trip = t;
+    // Gemini 키 맞추기: 이 기기에만 있고 여행에 없으면 여행에 실어 멤버와 공유하고,
+    // 여행에만 있고 이 기기에 없으면 기억해 둔다 (새 여행을 만들 때 자동 적용).
+    const devKey = localStorage.getItem('geminiKey');
+    if (!t.geminiKey && devKey) Store.updateTrip(id, { geminiKey: devKey }).catch(console.error);
+    else if (t.geminiKey && !devKey) localStorage.setItem('geminiKey', t.geminiKey);
     saveTrips([{ id, name: t.name, dates: t.start ? `${t.start} ~ ${t.end || t.start}` : '' }, ...myTrips().filter(x => x.id !== id)]);
     render();
   }));
