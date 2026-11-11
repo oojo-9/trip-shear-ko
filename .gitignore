@@ -1,0 +1,11 @@
+# --- 내 환경 정보: 공개 저장소에 올리지 않는다 ---
+# 지도 키·Firebase 설정 (암호화돼 있어도 올리지 않음). 형식은 config.example.js 참고
+config.js
+# 사이트 주소, 프로젝트 이름 등
+개인메모.md
+# Netlify에 올리는 복사본 (config.js 포함)
+배포용/
+
+# --- 편집 도구 설정 ---
+.idea/
+.claude/

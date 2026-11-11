@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 여행 ID(20자리 무작위 문자열 = 초대 링크)를 아는 사람만 접근할 수 있고,
+    // 여행 목록 전체를 훑어보는 것은 막는다.
+    match /trips/{tripId} {
+      allow get, create, update: if true;
+      allow list, delete: if false;
+      match /{col}/{docId} {
+        allow read, write: if true;
+      }
+    }
+  }
+}

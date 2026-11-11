@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>트립노트 잠그기</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app"><div class="home">
+  <div class="hero"><img src="icon.svg" alt="" width="56" height="56"><h1>비밀번호로 잠그기</h1><p>지도 키와 Firebase 설정을 암호화합니다</p></div>
+  <form class="card" id="lockform">
+    <label>새 비밀번호 <small>(10자 이상 권장 — 친구들에게 알려줄 비밀번호)</small><input type="password" id="pw1" minlength="8" required autocomplete="new-password"></label>
+    <label>한 번 더<input type="password" id="pw2" minlength="8" required autocomplete="new-password"></label>
+    <button class="primary wide">잠그기</button>
+    <p class="mut small" id="msg"></p>
+  </form>
+  <div class="card" id="done" hidden>
+    <small>잠금 완료</small>
+    <p>암호화된 설정이 준비됐어요. 아래 둘 중 하나를 하면 적용됩니다.</p>
+    <p class="small">① Claude에게 <b>“잠갔어”</b>라고 말하기 (config.js를 바꿔 줍니다)<br>② 아래 버튼으로 받은 파일로 이 폴더의 config.js를 덮어쓰기</p>
+    <a class="primary wide" id="dl" download="config.js" style="text-align:center;text-decoration:none">config.js 내려받기</a>
+  </div>
+</div></div>
+<script src="config.js"></script>
+<script>
+'use strict';
+const cfg = window.APP_CONFIG, msg = document.getElementById('msg'), form = document.getElementById('lockform');
+if (window.APP_CONFIG_LOCKED) { form.querySelector('button').disabled = true; msg.textContent = '이미 잠겨 있어요. 비밀번호를 바꾸려면 잠그기 전의 원래 config.js 값이 필요합니다.'; }
+else if (!cfg || (!cfg.googleMapsKey && !(cfg.firebase && cfg.firebase.projectId))) { form.querySelector('button').disabled = true; msg.textContent = 'config.js에 잠글 값이 없어요.'; }
+const b64 = u => btoa(String.fromCharCode(...new Uint8Array(u)));
+form.onsubmit = async e => {
+  e.preventDefault();
+  const pw = document.getElementById('pw1').value;
+  if (pw !== document.getElementById('pw2').value) { msg.textContent = '두 비밀번호가 달라요.'; return; }
+  const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), iter = 600000;
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(cfg)));
+  const text = `// 트립노트 설정 (비밀번호로 암호화됨). 비밀번호를 맞혀야 지도 키·Firebase 설정이 풀립니다.\n// 다시 만들려면 원래 값으로 config.js를 되돌린 뒤 lock.html을 여세요.\nwindow.APP_CONFIG_LOCKED = ${JSON.stringify({ salt: b64(salt), iv: b64(iv), iter, data: b64(data) }, null, 2)};\n`;
+  window.__lockedText = text; // 암호문만 담긴다 (비밀번호는 어디에도 저장하지 않음)
+  document.getElementById('dl').href = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));
+  form.hidden = true; document.getElementById('done').hidden = false;
+};
+</script>
+</body>
+</html>
